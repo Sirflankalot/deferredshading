@@ -17,9 +17,24 @@ void main() {
 	// Get data from gbuffer
 	vec3 FragPos = texture(gPosition, texcoords).rgb;
 	vec3 Normal  = texture(gNormal, texcoords).rgb;
-	vec3 Albedo  = texture(gAlbedoSpec, texcoords).rgb;
+	vec3 Diffuse = texture(gAlbedoSpec, texcoords).rgb;
 	float Spec   = texture(gAlbedoSpec, texcoords).a;
 
 	// Calculate lighting
-    FragColor = vec4(Albedo, 1.0f);
+    // Diffuse
+    vec3 lightDir = normalize(vLPosition - FragPos);
+    vec3 diffuse = max(dot(Normal, lightDir), 0.0) * vLColor;
+    // Specular
+    vec3 halfwayDir = normalize(lightDir + viewPos);
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), 8.0);
+    vec3 specular = vLColor * spec;
+    // Attenuation
+    float dist = length(vLPosition - FragPos);
+    float attenuation = 1.0 / ((1.0) + (2.0 * dist) + (1.874 * dist * dist));
+    diffuse *= attenuation;
+    specular *= attenuation;
+
+    FragColor = vec4((diffuse + specular) * 5, 1.0);
+
+ 	//FragColor = vec4(Diffuse, 1.0f);
 }

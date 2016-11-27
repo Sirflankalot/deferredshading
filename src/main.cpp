@@ -151,7 +151,7 @@ int main(int argc, char ** argv) {
 	// Lights //
 	////////////
 
-	constexpr size_t lightcount = 10;
+	constexpr size_t lightcount = 100;
 
 	struct LightPosition {
 		float distance;
@@ -167,7 +167,7 @@ int main(int argc, char ** argv) {
 
 	{
 		// Position
-		std::uniform_real_distribution<float> position_dist_distribution(2, 5);
+		std::uniform_real_distribution<float> position_dist_distribution(1, 5);
 		std::uniform_real_distribution<float> position_orbit_distribution(0.0f, glm::two_pi<float>());
 		std::uniform_real_distribution<float> position_angle_distribution(glm::radians(-60.0f), glm::radians(60.0f));
 		std::uniform_real_distribution<float> position_size_distribution(0.01, 0.25);
@@ -223,13 +223,13 @@ int main(int argc, char ** argv) {
 
 	glGenBuffers(1, &LightPosition_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, LightPosition_VBO);
-	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
+	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeof(LightPosition), NULL);
 	glEnableVertexAttribArray(6);
 	glVertexAttribDivisor(6, 1);
 
 	glGenBuffers(1, &LightCircle_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, LightCircle_VBO);
-	glBufferData(GL_ARRAY_BUFFER, circlefile.objects[0].vertices.size() * sizeof(Vertex), circlefile.objects[0].vertices.data(), GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, circlefile.objects[0].vertices.size() * sizeof(Vertex), circlefile.objects[0].vertices.data(), GL_STATIC_DRAW);
 	glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), NULL);
 	
 	glBindVertexArray(0);
@@ -442,6 +442,9 @@ int main(int argc, char ** argv) {
 		glBindVertexArray(Light_VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, LightTransform_VBO);
 		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(glm::mat4), lighteffectworldmatrix.data(), GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, LightPosition_VBO);
+		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(LightPosition), lightposition.data(), GL_DYNAMIC_DRAW);
 
 		glUniformMatrix4fv(uLightBoundPerspective, 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(uLightBoundView, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
