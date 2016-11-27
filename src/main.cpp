@@ -114,7 +114,7 @@ int main(int argc, char ** argv) {
 	lightbound.use();
 	glUniform1i(lightbound.getUniform("gPosition"), 0);
 	glUniform1i(lightbound.getUniform("gNormal"), 1);
-	glUniform1i(lightbound.getUniform("gAlbedoSpec", Shader::MANDITORY), 2);
+	glUniform1i(lightbound.getUniform("gAlbedoSpec"), 2);
 
 	Shader_Program drawlights;
 	drawlights.add("shaders/drawlight.v.glsl", Shader::VERTEX);
@@ -449,17 +449,15 @@ int main(int argc, char ** argv) {
 		glUniform2f(uLightBoundResolution, sdlm.size.width, sdlm.size.height);
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_ZERO, GL_ONE);
+		glBlendFunc(GL_ONE, GL_ONE);
 
-		// Bind the gBuffer
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, reninfo.gPosition);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, reninfo.gNormal);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, reninfo.gAlbedoSpec);
+		glDisableVertexAttribArray(0);
+		glEnableVertexAttribArray(7);
 
 		glDrawArraysInstanced(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size(), lightcount);
+
+		glDisableVertexAttribArray(7);
+		glEnableVertexAttribArray(0);
 
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);

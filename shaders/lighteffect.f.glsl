@@ -12,13 +12,13 @@ uniform vec3 viewPos; // Viewport position
 uniform vec2 resolution; // Screen Resolution
 
 void main() {
-	vec2 normalized = (gl_FragCoord.xy / resolution);
-	vec2 texcoord = vec2(normalized.x, 1 - normalized.y);
+	vec2 texcoords = (gl_FragCoord.xy / resolution);
+
 	// Get data from gbuffer
-	vec3 FragPos = texture(gPosition, texcoord).rgb;
-	vec3 Normal  = texture(gNormal, texcoord).rgb;
-	vec3 Albedo  = texture(gAlbedoSpec, texcoord).rgb;
-	float Spec   = texture(gAlbedoSpec, texcoord).a;
+	vec3 FragPos = texture(gPosition, texcoords).rgb;
+	vec3 Normal  = texture(gNormal, texcoords).rgb;
+	vec3 Albedo  = texture(gAlbedoSpec, texcoords).rgb;
+	float Spec   = texture(gAlbedoSpec, texcoords).a;
 
 	// Calculate lighting
     FragColor = vec4(Albedo, 1.0f);
