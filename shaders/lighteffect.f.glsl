@@ -33,7 +33,7 @@ void main() {
     vec3 specular = vLColor * spec;
     // Attenuation
     float dist = length(vLPosition - FragPos);
-    float attenuation = 1.0 / ((1.0) + (0.7 * dist) + (2.4 * dist * dist));
+    float attenuation = 1.0 / ((1.0) + (0.7 * dist) + (1.8 * dist * dist));
     diffuse *= attenuation;
     specular *= attenuation;
 

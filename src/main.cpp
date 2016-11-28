@@ -178,7 +178,7 @@ int main(int argc, char ** argv) {
 	struct LightData {
 		float distance;
 		float orbit;
-		float angle;
+		float height;
 		float size;
 	};
 
@@ -198,10 +198,9 @@ int main(int argc, char ** argv) {
 	std::uniform_real_distribution<float> color_distribution(0, 1);
 	std::uniform_real_distribution<float> intensity_distribution(0.1, 3);
 	// Position
-	std::uniform_real_distribution<float> position_dist_distribution(1, 5);
+	std::uniform_real_distribution<float> position_dist_distribution(1, 30);
 	std::uniform_real_distribution<float> position_orbit_distribution(0.0f, glm::two_pi<float>());
-	std::uniform_real_distribution<float> position_angle_distribution(glm::radians(-60.0f), glm::radians(60.0f));
-	std::uniform_real_distribution<float> position_size_distribution(0.01, 0.25);
+	std::uniform_real_distribution<float> position_height_distribution(-2.5, 2.5);
 
 	auto create_single_light = [&] {
 		// Color
@@ -212,7 +211,7 @@ int main(int argc, char ** argv) {
 		LightData ret;
 		ret.distance = position_dist_distribution(prng);
 		ret.orbit = position_orbit_distribution(prng);
-		ret.angle = position_angle_distribution(prng);
+		ret.height = position_height_distribution(prng);
 		constexpr float constant = 1.0;
 		constexpr float linear = 0.7;
 		constexpr float quadratic = 1.8;
@@ -334,7 +333,7 @@ int main(int argc, char ** argv) {
 	(void) mouseLY;
 
 	FPS_Meter fps(true, 2);
-	Camera cam(glm::vec3(0, 0, 10));
+	Camera cam(glm::vec3(0, 10, 25));
 		
 	///////////////
 	// Game Loop //
@@ -449,13 +448,13 @@ int main(int argc, char ** argv) {
 			auto&& lp = lightdata[i];
 			lp.orbit += glm::radians(15.0f * fps.get_delta_time());
 
-			glm::mat4 angle = glm::rotate(glm::mat4(), lp.angle, glm::vec3(1, 0, 0));
+			glm::mat4 height = glm::translate(glm::mat4(), glm::vec3(0, lp.height, 0));
 			glm::mat4 orbit = glm::rotate(glm::mat4(), lp.orbit, glm::vec3(0, 1, 0));
 			glm::mat4 trans = glm::translate(glm::mat4(), glm::vec3(0, 0, -lp.distance));
 			glm::mat4 scale = glm::scale(glm::mat4(), glm::vec3(lp.size * 0.05));
 			glm::mat4 effectscale = glm::scale(glm::mat4(), glm::vec3(lp.size));
 
-			glm::mat4 unscaled = orbit * angle * trans;
+			glm::mat4 unscaled = orbit * height * trans;
 			lightposition[i] = glm::vec3(unscaled * glm::vec4(0, 0, 0, 1));
 			lightworldmatrix[i] = unscaled * scale;
 			lighteffectworldmatrix[i] = unscaled * effectscale;
