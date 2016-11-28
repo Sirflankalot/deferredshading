@@ -111,10 +111,15 @@ int main(int argc, char ** argv) {
 	lightbound.compile();
 	lightbound.link();
 
+	auto uLightBoundWorld = lightbound.getUniform("world", Shader::MANDITORY);
 	auto uLightBoundView = lightbound.getUniform("view", Shader::MANDITORY);
 	auto uLightBoundPerspective = lightbound.getUniform("perspective", Shader::MANDITORY);
+
 	auto uLightBoundViewPos = lightbound.getUniform("viewPos");
 	auto uLightBoundResolution = lightbound.getUniform("resolution");
+
+	auto uLightBoundLightPosition = lightbound.getUniform("lightposition");
+	auto uLightBoundLightColor = lightbound.getUniform("lightcolor");
 
 	lightbound.use();
 	glUniform1i(lightbound.getUniform("gPosition"), 0);
@@ -569,7 +574,15 @@ int main(int argc, char ** argv) {
 		glDisableVertexAttribArray(0);
 		glEnableVertexAttribArray(7);
 
-		glDrawArraysInstanced(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size(), lightcount);
+		for (size_t i = 0; i < lightcount; ++i) {
+			glUniformMatrix4fv(uLightBoundWorld, 1, GL_FALSE, glm::value_ptr(lighteffectworldmatrix[i]));
+			glUniform3fv(uLightBoundLightColor, 1, glm::value_ptr(lightcolor[i]));
+			glUniform3fv(uLightBoundLightPosition, 1, glm::value_ptr(lightposition[i]));
+
+			glDrawArrays(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size());
+		}
+
+		// glDrawArraysInstanced(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size(), lightcount);
 
 		glDisableVertexAttribArray(7);
 		glEnableVertexAttribArray(0);
