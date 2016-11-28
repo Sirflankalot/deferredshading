@@ -4,16 +4,16 @@
 #include <iostream>
 #include <utility>
 
-void FPS_Meter::frame() {
+void FPS_Meter::frame(size_t lightcount) {
 	last_frame_time = std::exchange(frame_time, SDL_GetTicks() / 1000.f);
 	frame_times.push_back(frame_time);
 	frame_number += 1;
 	fps_ready = false;
-	update_fps();
+	update_fps(lightcount);
 }
 
-float FPS_Meter::get_fps() {
-	update_fps();
+float FPS_Meter::get_fps(size_t lightcount) {
+	update_fps(lightcount);
 	return fps;
 }
 
@@ -29,14 +29,15 @@ float FPS_Meter::get_delta_time() {
 	return frame_time - last_frame_time;
 }
 
-void FPS_Meter::update_fps() {
+void FPS_Meter::update_fps(size_t lightcount) {
 	auto calc_fps = [&]() {
 		fps = static_cast<float>(frame_times.size()) / (frame_times.back() - frame_times.front());
+		timeperlight = ((1.0 / fps) * 1000) / lightcount;
 	};
 
 	auto print = [&]() {
 		if (print_fps && frame_time - last_print_time >= 1) {
-			std::cout << fps << " - " << frame_times.size() << std::endl;
+			std::cout << "FPS: " << fps << " - " << frame_times.size() << " - " << timeperlight << "ms/light" << std::endl;
 			last_print_time = frame_time;
 		}
 	};

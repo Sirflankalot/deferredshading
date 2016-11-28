@@ -6,20 +6,21 @@
 class FPS_Meter {
   public:
 	FPS_Meter(bool print = false, float purge = 1) : print_fps(print), purge_rate(purge){};
-	void frame();
-	float get_fps();
+	void frame(size_t lightcount);
+	float get_fps(size_t lightcount);
 	uint64_t get_frame_number();
 	float get_time();
 	float get_delta_time();
 
   private:
-	void update_fps();
+	void update_fps(size_t light_count);
 
 	bool print_fps;
 
 	std::vector<float> frame_times;
 	bool fps_ready   = false;
 	float fps        = 0;
+	float timeperlight = 0;
 	float purge_rate = 1;
 
 	uint64_t frame_number = 0;

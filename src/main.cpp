@@ -33,13 +33,17 @@ void DeleteGbuffer(RenderInfo& data);
 glm::mat4 Resize(SDL_Manager& sdlm, RenderInfo& data);
 
 int main(int argc, char ** argv) {
+	(void) argc;
+	(void) argv;
+
 	//////////////////////////
 	// Parse an object file //
 	//////////////////////////
 
 	auto file = parse_obj_file("monkey.wavobj");
+	auto worldfile = parse_obj_file("world.wavobj");
 
-	auto test_vertex = file.objects[0].vertices[11];
+	//auto test_vertex = file.objects[0].vertices[11];
 
 	// Check arbitrary vertex for correctness
 	//assert(std::abs(test_vertex.x - (-0.704000f)) <= 0.01);
@@ -83,7 +87,8 @@ int main(int argc, char ** argv) {
 	auto uGeoView = geometrypass.getUniform("view", Shader::MANDITORY);
 	auto uGeoProjection = geometrypass.getUniform("projection", Shader::MANDITORY);
 
-	auto world = glm::translate(glm::mat4(), glm::vec3(0, 0, 0));
+	auto world_world = glm::scale(glm::translate(glm::mat4(), glm::vec3(0, -1, 0)), glm::vec3(10, 2, 10));
+	auto monkey_world = glm::translate(glm::mat4(), glm::vec3(0, 0, 0));
 	auto projection = glm::perspective(glm::radians(60.0f), sdlm.size.ratio, 0.1f, 1000.0f);
 
 	Shader_Program lightingpass;
@@ -135,7 +140,24 @@ int main(int argc, char ** argv) {
 
 	glGenBuffers(1, &Monkey_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, Monkey_VBO);
-	glBufferData(GL_ARRAY_BUFFER, file.objects[0].vertices.size() * sizeof(Vertex), file.objects[0].vertices.data(), GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, file.objects[0].vertices.size() * sizeof(Vertex), file.objects[0].vertices.data(), GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (0 * sizeof(GLfloat))); // Position
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (3 * sizeof(GLfloat))); // Texcoords
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (5 * sizeof(GLfloat))); // Normals
+	
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+
+	// World
+	GLuint World_VAO, World_VBO;
+	glGenVertexArrays(1, &World_VAO);
+	glBindVertexArray(World_VAO);
+
+	glGenBuffers(1, &World_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, World_VBO);
+	glBufferData(GL_ARRAY_BUFFER, worldfile.objects[0].vertices.size() * sizeof(Vertex), worldfile.objects[0].vertices.data(), GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (0 * sizeof(GLfloat))); // Position
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (3 * sizeof(GLfloat))); // Texcoords
@@ -151,36 +173,91 @@ int main(int argc, char ** argv) {
 	// Lights //
 	////////////
 
-	constexpr size_t lightcount = 100;
+	size_t lightcount = 0;
 
-	struct LightPosition {
+	struct LightData {
 		float distance;
 		float orbit;
 		float angle;
 		float size;
 	};
 
-	std::vector<LightPosition> lightposition(lightcount, {0,0,0,0});
-	std::vector<glm::mat4> lightworldmatrix(lightcount, glm::mat4{});
-	std::vector<glm::mat4> lighteffectworldmatrix(lightcount, glm::mat4{});
-	std::vector<glm::vec3> lightcolor(lightcount, glm::vec3{});
+	std::vector<LightData> lightdata;
+	std::vector<glm::vec3> lightposition;
+	std::vector<glm::mat4> lightworldmatrix;
+	std::vector<glm::mat4> lighteffectworldmatrix;
+	std::vector<glm::vec3> lightcolor;
 
-	{
+	lightdata.reserve(lightcount);
+	lightposition.reserve(lightcount);
+	lightworldmatrix.reserve(lightcount);
+	lighteffectworldmatrix.reserve(lightcount);
+	lightcolor.reserve(lightcount);
+
+	// Color
+	std::uniform_real_distribution<float> color_distribution(0, 1);
+	std::uniform_real_distribution<float> intensity_distribution(0.1, 3);
+	// Position
+	std::uniform_real_distribution<float> position_dist_distribution(1, 5);
+	std::uniform_real_distribution<float> position_orbit_distribution(0.0f, glm::two_pi<float>());
+	std::uniform_real_distribution<float> position_angle_distribution(glm::radians(-60.0f), glm::radians(60.0f));
+	std::uniform_real_distribution<float> position_size_distribution(0.01, 0.25);
+
+	auto create_single_light = [&] {
+		// Color
+		lightcolor.emplace_back(glm::normalize(glm::vec3(color_distribution(prng), color_distribution(prng), color_distribution(prng))) * intensity_distribution(prng));
+
 		// Position
-		std::uniform_real_distribution<float> position_dist_distribution(1, 5);
-		std::uniform_real_distribution<float> position_orbit_distribution(0.0f, glm::two_pi<float>());
-		std::uniform_real_distribution<float> position_angle_distribution(glm::radians(-60.0f), glm::radians(60.0f));
-		std::uniform_real_distribution<float> position_size_distribution(0.01, 0.25);
-		std::generate_n(lightposition.begin(), lightcount, [&] {
-			return LightPosition{position_dist_distribution(prng), position_orbit_distribution(prng), position_angle_distribution(prng), position_size_distribution(prng)};
-		});
+		auto&& colorit = lightcolor.end() - 1;
+		LightData ret;
+		ret.distance = position_dist_distribution(prng);
+		ret.orbit = position_orbit_distribution(prng);
+		ret.angle = position_angle_distribution(prng);
+		constexpr float constant = 1.0;
+		constexpr float linear = 0.7;
+		constexpr float quadratic = 1.8;
+		float lightMax = std::max(std::max(colorit->r, colorit->g), colorit->b);
+		ret.size = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0 / 4.0) * lightMax))) / (2 * quadratic);
+		lightdata.push_back(std::move(ret));
 
-		// Setup color
-		std::uniform_real_distribution<float> color_distribution(0, 1);
-		std::generate_n(lightcolor.begin(), lightcount, [&] {
-			return glm::vec3(color_distribution(prng), color_distribution(prng), color_distribution(prng));
-		});
-	}
+		lightposition.emplace_back();
+		lightworldmatrix.emplace_back();
+		lighteffectworldmatrix.emplace_back();
+
+		lightcount += 1;
+	};
+
+	auto create_light = [&](size_t count = 10) {
+		for (size_t i = 0; i < count; ++i) {
+			create_single_light();
+		}
+
+		std::cerr << count << " lights added. " << lightcount << " total.\n";
+	};
+
+	auto remove_single_light = [&] {
+		if (lightcount) {
+			lightdata.pop_back();
+			lightposition.pop_back();
+			lightworldmatrix.pop_back();
+			lighteffectworldmatrix.pop_back();
+			lightcolor.pop_back();
+			lightcount -= 1;
+		}
+		else {
+			std::cerr << "Dammit you, there are no more lights left!\n";
+		}
+	};
+
+	auto remove_light = [&](size_t count = 10) {
+		for (size_t i = 0; i < count; ++i) {
+			remove_single_light();
+		}
+
+		std::cerr << count << " lights removed. " << lightcount << " total.\n";
+	};
+
+	create_light(20);
 
 	auto circlefile = parse_obj_file("sphere.wavobj");
 	auto squarefile = parse_obj_file("square.wavobj");
@@ -216,14 +293,13 @@ int main(int argc, char ** argv) {
 
 	glGenBuffers(1, &LightColor_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, LightColor_VBO);
-	glBufferData(GL_ARRAY_BUFFER, lightcolor.size() * sizeof(glm::vec3), lightcolor.data(), GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
 	glEnableVertexAttribArray(1);
 	glVertexAttribDivisor(1, 1);
 
 	glGenBuffers(1, &LightPosition_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, LightPosition_VBO);
-	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeof(LightPosition), NULL);
+	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
 	glEnableVertexAttribArray(6);
 	glVertexAttribDivisor(6, 1);
 
@@ -246,7 +322,7 @@ int main(int argc, char ** argv) {
 	///////////////
 
 	bool loop = true;
-	bool fullscreen = false;
+	bool fullscreen = false, gotmouse = true;
 	std::unordered_map<SDL_Keycode, bool> keys;
 
 	SDL_SetRelativeMouseMode(SDL_TRUE);
@@ -258,7 +334,7 @@ int main(int argc, char ** argv) {
 	(void) mouseLY;
 
 	FPS_Meter fps(true, 2);
-	Camera cam(glm::vec3(0, 0, 3));
+	Camera cam(glm::vec3(0, 0, 10));
 		
 	///////////////
 	// Game Loop //
@@ -281,7 +357,7 @@ int main(int argc, char ** argv) {
 			cam.rotate(mouseDY, mouseDX, 50);
 		}
 
-		fps.frame();
+		fps.frame(lightcount);
 
 		const float cameraSpeed = 5.0f * fps.get_delta_time();
 
@@ -312,6 +388,31 @@ int main(int argc, char ** argv) {
 								SDL_SetWindowFullscreen(sdlm.mainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
 								fullscreen = true;
 							}
+							break;
+						case SDLK_0:
+							remove_light(lightcount);
+							break;
+						case SDLK_RIGHTBRACKET:
+							create_light(10);
+							break;
+						case SDLK_LEFTBRACKET:
+							remove_light(10);
+							break;
+						case SDLK_EQUALS:
+							create_light(1);
+							break;
+						case SDLK_MINUS:
+							remove_light(1);
+							break;
+						case SDLK_LALT:
+						case SDLK_RALT:
+							if (gotmouse) {
+								SDL_SetRelativeMouseMode(SDL_FALSE);
+							}
+							else {
+								SDL_SetRelativeMouseMode(SDL_TRUE);
+							}
+							gotmouse = !gotmouse;
 							break;
 						default:
 							break;
@@ -345,16 +446,17 @@ int main(int argc, char ** argv) {
 
 		// Update Light Transforms
 		for (size_t i = 0; i < lightcount; ++i) {
-			auto&& lp = lightposition[i];
-			lp.orbit += glm::radians(5.0f * fps.get_delta_time());
+			auto&& lp = lightdata[i];
+			lp.orbit += glm::radians(15.0f * fps.get_delta_time());
 
 			glm::mat4 angle = glm::rotate(glm::mat4(), lp.angle, glm::vec3(1, 0, 0));
 			glm::mat4 orbit = glm::rotate(glm::mat4(), lp.orbit, glm::vec3(0, 1, 0));
 			glm::mat4 trans = glm::translate(glm::mat4(), glm::vec3(0, 0, -lp.distance));
-			glm::mat4 scale = glm::scale(glm::mat4(), glm::vec3(lp.size));
-			glm::mat4 effectscale = glm::scale(glm::mat4(), glm::vec3(lp.size * 15));
+			glm::mat4 scale = glm::scale(glm::mat4(), glm::vec3(lp.size * 0.05));
+			glm::mat4 effectscale = glm::scale(glm::mat4(), glm::vec3(lp.size));
 
 			glm::mat4 unscaled = orbit * angle * trans;
+			lightposition[i] = glm::vec3(unscaled * glm::vec4(0, 0, 0, 1));
 			lightworldmatrix[i] = unscaled * scale;
 			lighteffectworldmatrix[i] = unscaled * effectscale;
 		}
@@ -367,7 +469,7 @@ int main(int argc, char ** argv) {
 		geometrypass.use();
 
 		// Update matrix uniforms
-		glUniformMatrix4fv(uGeoWorld, 1, GL_FALSE, glm::value_ptr(world));
+		glUniformMatrix4fv(uGeoWorld, 1, GL_FALSE, glm::value_ptr(monkey_world));
 		glUniformMatrix4fv(uGeoView, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
 		glUniformMatrix4fv(uGeoProjection, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -375,25 +477,33 @@ int main(int argc, char ** argv) {
 		glBindFramebuffer(GL_FRAMEBUFFER, reninfo.gBuffer);
 
 		// Clear the gBuffer
-		glClearColor(0, 0, 0, 1);
+		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Use normal depth function
+		glDepthFunc(GL_LESS);
 
 		// Bind monkey vertex data
 		glBindVertexArray(Monkey_VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, Monkey_VBO);
 
-		// Use normal depth function
-		glDepthFunc(GL_LESS);
-
 		// Draw elements on the gBuffer
 		glDrawArrays(GL_TRIANGLES, 0, file.objects[0].vertices.size());
 
-		// Unbind framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// Bind world vertex data
+		glBindVertexArray(World_VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, World_VBO);
 
+		glUniformMatrix4fv(uGeoWorld, 1, GL_FALSE, glm::value_ptr(world_world));
+
+		glDrawArrays(GL_TRIANGLES, 0, worldfile.objects[0].vertices.size());
+		
 		// Unbind arrays
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Unbind framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		///////////////////
 		// Lighting Pass //
@@ -436,20 +546,23 @@ int main(int argc, char ** argv) {
 
 		lightbound.use();
 
-		glDepthFunc(GL_LESS);
-		glDepthMask(GL_FALSE);
-
 		glBindVertexArray(Light_VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, LightTransform_VBO);
 		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(glm::mat4), lighteffectworldmatrix.data(), GL_DYNAMIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, LightPosition_VBO);
-		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(LightPosition), lightposition.data(), GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(glm::vec3), lightposition.data(), GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, LightColor_VBO);
+		glBufferData(GL_ARRAY_BUFFER, lightcount * sizeof(glm::vec3), lightcolor.data(), GL_STATIC_DRAW);
 
 		glUniformMatrix4fv(uLightBoundPerspective, 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(uLightBoundView, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
 		glUniform3fv(uLightBoundViewPos, 1, glm::value_ptr(cam.get_location()));
 		glUniform2f(uLightBoundResolution, sdlm.size.width, sdlm.size.height);
+
+		glDepthFunc(GL_LESS);
+		glDepthMask(GL_FALSE);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);

@@ -20,5 +20,5 @@ void main() {
 
 	// Calculate lighting
     float in_sun = clamp(dot(Normal, sundir) * 4.0f, -1, 1);
-    FragColor = vec4(Albedo * in_sun, 1.0f);
+    FragColor = vec4(Albedo * in_sun + vec3(0, 0, 0.1), 1.0f);
 }
