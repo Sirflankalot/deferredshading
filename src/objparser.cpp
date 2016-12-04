@@ -1,12 +1,15 @@
 #include "objparser.hpp"
 
-#include <fstream>
-#include <iostream>
 #include <sstream>
+#include <iostream>
 #include <stdexcept>
 #include <tuple>
 
+#include "util.hpp"
+
 ObjFile parse_obj_file(std::string name) {
+	auto raw_file = file_contents(name.c_str());
+
 	ObjFile file;
 
 	size_t line = 1;
@@ -20,7 +23,7 @@ ObjFile parse_obj_file(std::string name) {
 
 #define error(v) error_impl(v, __LINE__)
 
-	std::ifstream fs(name);
+	std::istringstream fs(raw_file);
 
 	if (!fs) {
 		std::cerr << "Couldn't open file " << name << '\n';

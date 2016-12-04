@@ -14,7 +14,7 @@ void main() {
 	// Normal vector
 	gNormal = normalize(vNormal);
 	// Diffuse color
-	gAlbedoSpec.rgb = vec3(1.0f, 0.5f, 0.2f);
+	gAlbedoSpec.rgb = vec3(1.0, 0.2176, 0.028991);
 	// Specular
 	gAlbedoSpec.a = 1.0f;
 } 

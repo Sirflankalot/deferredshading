@@ -26,7 +26,7 @@ OBJ       := $(patsubst src/%.cpp,obj/%.o,$(SRC))
 
 all: checkdirs $(TARGET_DIR)/$(PROJECT_NAME)
 
-debug: DEBUG = -g -DDEBUG
+debug: DEBUG = -g -D_DEBUG
 debug: OPTIMIZE = -O0
 debug: checkdirs $(TARGET_DIR)/$(PROJECT_NAME)
 
