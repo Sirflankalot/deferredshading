@@ -11,6 +11,8 @@ uniform vec3 viewPos; // Viewport position
 uniform vec3 lightposition;
 uniform vec3 lightcolor;
 
+uniform float radius;
+
 void main() {
 	vec3 normal = normalize(vNormal);
 	// Calculate lighting
@@ -20,11 +22,13 @@ void main() {
     // Specular
     vec3 viewDir = normalize(viewPos - vFragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 168.0);
     vec3 specular = spec * lightcolor;
     // Attenuation
     float dist = length(lightposition - vFragPos);
-    float attenuation = max(0, (1.0 / ((1.0) + (0.7 * dist) + (1.4 * dist * dist))) - (7.0 / 256.0));
+    // float attenuation = max(0, (1.0 / ((1.0) + (0.7 * dist) + (1.4 * dist * dist))) - (7.0 / 256.0));
+    float attenuation = clamp(1.0 - dist/radius, 0.0, 1.0);
+    attenuation *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 

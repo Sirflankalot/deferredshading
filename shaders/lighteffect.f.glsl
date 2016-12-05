@@ -12,12 +12,14 @@ uniform vec2 resolution; // Screen Resolution
 uniform vec3 lightposition;
 uniform vec3 lightcolor;
 
+uniform float radius;
+
 void main() {
 	vec2 texcoords = (gl_FragCoord.xy / resolution);
 
 	// Get data from gbuffer
 	vec3 FragPos = texture(gPosition, texcoords).rgb;
-	vec3 Normal  = normalize(texture(gNormal, texcoords).rgb);
+	vec3 Normal  = texture(gNormal, texcoords).rgb;
 	vec3 Diffuse = texture(gAlbedoSpec, texcoords).rgb;
 	float Spec   = texture(gAlbedoSpec, texcoords).a;
 
@@ -29,12 +31,11 @@ void main() {
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(Normal, halfwayDir), 0.0), 168.0);
-    //vec3 reflectDir = reflect(-lightDir, Normal);
-    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = lightcolor * spec;
     // Attenuation
     float dist = length(lightposition - FragPos);
-    float attenuation = max(0, (1.0 / ((1.0) + (0.7 * dist) + (1.4 * dist * dist))) );
+    float attenuation = clamp(1.0 - dist/(radius), 0.0, 1.0);
+    attenuation *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 

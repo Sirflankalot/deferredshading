@@ -35,6 +35,8 @@
 *.out
 *.app
 
+*.7z
+
 
 ### VisualStudio ###
 ## Ignore Visual Studio temporary files, build results, and
