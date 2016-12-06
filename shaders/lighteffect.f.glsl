@@ -19,7 +19,7 @@ void main() {
 
 	// Get data from gbuffer
 	vec3 FragPos = texture(gPosition, texcoords).rgb;
-	vec3 Normal  = texture(gNormal, texcoords).rgb;
+	vec3 Normal  = normalize(texture(gNormal, texcoords).rgb);
 	vec3 Diffuse = texture(gAlbedoSpec, texcoords).rgb;
 	float Spec   = texture(gAlbedoSpec, texcoords).a;
 

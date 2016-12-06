@@ -78,7 +78,11 @@ $1/%-avx2.o: %-avx2.cpp
 	@$$(CXX) $$(WARNINGS) $$(STD) $$(OPTIMIZE) -mavx2 -mfma $$(DEBUG) $$(DEFINES) $$(INCLUDES) -c $$< -o $$@
 endef
 
+tounix:
+	@find . | awk "/\.cpp/ || /\.hpp/ || /\.glsl/ || /\.sln/ || /\.vcxproj/" | tr '\n' '\0' | xargs -0 dos2unix
 
+towin:
+	@find . | awk "/\.cpp/ || /\.hpp/ || /\.glsl/ || /\.sln/ || /\.vcxproj/" | tr '\n' '\0' | xargs -0 unix2dos
 
 $(TARGET_DIR)/$(PROJECT_NAME): $(OBJ)
 	@echo Linking $@

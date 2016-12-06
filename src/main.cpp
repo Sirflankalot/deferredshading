@@ -212,9 +212,10 @@ int main(int argc, char ** argv) {
 	ssaoPass1.link();
 	ssaoPass1.use();
 
-	glUniform1i(ssaoPass1.getUniform("gPositionDepth", Shader::MANDITORY), 0);
-	glUniform1i(ssaoPass1.getUniform("gNormal", Shader::MANDITORY), 1);
-	glUniform1i(ssaoPass1.getUniform("texNoise", Shader::MANDITORY), 3);
+	glUniform1i(ssaoPass1.getUniform("gPositionDepth"), 0);
+	glUniform1i(ssaoPass1.getUniform("gNormal"), 1);
+	glUniform1i(ssaoPass1.getUniform("gDepth"), 6);
+	glUniform1i(ssaoPass1.getUniform("texNoise"), 3);
 
 	auto uSSAOPass1Samples = ssaoPass1.getUniform("samples", Shader::MANDITORY);
 	auto uSSAOPass1View = ssaoPass1.getUniform("view", Shader::MANDITORY);
@@ -716,6 +717,8 @@ int main(int argc, char ** argv) {
 			glBindTexture(GL_TEXTURE_2D, reninfo.ssaoColor);
 			glActiveTexture(GL_TEXTURE5);
 			glBindTexture(GL_TEXTURE_2D, reninfo.ssaoBlurColor);
+			glActiveTexture(GL_TEXTURE6);
+			glBindTexture(GL_TEXTURE_2D, reninfo.gDepth);
 
 			///////////////
 			// SSAO Pass //
@@ -1098,7 +1101,7 @@ void PrepareBuffers(size_t x, size_t y, RenderInfo& data) {
 	// - Position color buffer
 	glGenTextures(1, &data.gPosition);
 	glBindTexture(GL_TEXTURE_2D, data.gPosition);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, x, y, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1170,7 +1173,7 @@ void PrepareBuffers(size_t x, size_t y, RenderInfo& data) {
 
 	glGenTextures(1, &data.ssaoColor);
 	glBindTexture(GL_TEXTURE_2D, data.ssaoColor);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, x, y, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, x, y, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, data.ssaoColor, 0);
