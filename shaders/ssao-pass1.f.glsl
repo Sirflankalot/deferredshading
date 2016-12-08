@@ -14,7 +14,7 @@ uniform mat4 view;
 uniform mat4 projection;
 
 const int kernelSize = 64;
-const float radius = 1.0;
+const float radius = 2.0;
 const float bias = 0.000;
 
 const float NEAR = 0.5;
@@ -31,8 +31,8 @@ void main() {
 	vec3 normal = normalize(mat3(transpose(inverse(view))) * texture(gNormal, vTexCoords).rgb);
 	float depth = LinearizeDepth(texture(gDepth, vTexCoords).r);
 
-	// vec3 randomVec = texture(texNoise, gl_FragCoord.xy / vec2(4.0)).xyz;
-    vec3 randomVec = vec3(1.0, 0, 0);
+	vec3 randomVec = texture(texNoise, gl_FragCoord.xy / vec2(4.0)).xyz;
+    // vec3 randomVec = vec3(1.0, 0, 0);
 
 	// Create TBN change-of-basis matrix: from tangent-space to view-space
 	vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));

@@ -6,7 +6,7 @@ out float fragColor;
 
 uniform sampler2D ssaoInput;
 
-const int blursize = 2;
+const int blursize = 3;
 
 void main() {
 	vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
