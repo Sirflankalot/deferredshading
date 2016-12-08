@@ -21,7 +21,7 @@ void main() {
 	float ssao   = texture(ssaoInput, vTexCoords).r;
 
 	// Calculate lighting
-    float in_sun = clamp(dot(Normal, normalize(sundir)) * 2.0, -1, 1) * 0.5 + 0.5;
+    float in_sun = clamp(dot(Normal, normalize(sundir)) * 3.0, -1, 1) * 0.5 + 0.5;
     FragColor = vec4(Albedo * in_sun * ssao + vec3(0.027, 0.027, 0.027) * ssao, 1.0);
     // FragColor = vec4(vec3(0.0), 1.0);
 }

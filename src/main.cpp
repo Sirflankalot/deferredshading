@@ -36,7 +36,7 @@ struct RenderInfo {
 	GLuint lColor, lDepth;
 	GLuint ssaoBuffer, ssaoBlurBuffer;
 	GLuint ssaoNoiseTexture; 
-	GLuint ssaoColor, ssaoBlurColor;
+	GLuint ssaoColor, ssaoDepth, ssaoBlurColor;
 
 };
 
@@ -472,6 +472,8 @@ int main(int argc, char ** argv) {
 	///////////////
 
 	bool forward = false;
+	bool SSAO = true;
+	bool dynamic_lighting = true;
 	bool loop = true;
 	bool fullscreen = false, gotmouse = true;
 	std::unordered_map<SDL_Keycode, bool> keys;
@@ -575,6 +577,26 @@ int main(int argc, char ** argv) {
 							else {
 								std::cerr << "Enabling forward rendering.\n";
 								forward = true;
+							}
+							break;
+						case SDLK_n:
+							if (SSAO) {
+								std::cerr << "Disabiling SSAO\n";
+								SSAO = false;
+							}
+							else {
+								std::cerr << "Enabling SSAO\n";
+								SSAO = true;
+							}
+							break;
+						case SDLK_b:
+							if (dynamic_lighting) {
+								std::cerr << "Disabiling dynamic lighting\n";
+								dynamic_lighting = false;
+							}
+							else {
+								std::cerr << "Enabling dynamic lighting\n";
+								dynamic_lighting = true;
 							}
 							break;
 						default:
@@ -697,11 +719,18 @@ int main(int argc, char ** argv) {
 			// Depth Blit //
 			////////////////
 			
-			// Blit depth pass to current depth
+			// Blit depth pass to light buffer
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, reninfo.gBuffer);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, reninfo.lBuffer);
 
 			glBlitFramebuffer(0, 0, sdlm.size.width, sdlm.size.height, 0, 0, sdlm.size.width, sdlm.size.height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+			if (SSAO) {
+				// Blit depth pass to ssao buffer
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, reninfo.ssaoBuffer);
+
+				glBlitFramebuffer(0, 0, sdlm.size.width, sdlm.size.height, 0, 0, sdlm.size.width, sdlm.size.height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			}
 			glBindFramebuffer(GL_FRAMEBUFFER, reninfo.lBuffer);
 
 			// Bind the buffers
@@ -723,26 +752,36 @@ int main(int argc, char ** argv) {
 			///////////////
 			// SSAO Pass //
 			///////////////
-
-			glBindFramebuffer(GL_FRAMEBUFFER, reninfo.ssaoBuffer);
 			
-			glClear(GL_COLOR_BUFFER_BIT);
-			ssaoPass1.use();
+			if (SSAO) {
+				glBindFramebuffer(GL_FRAMEBUFFER, reninfo.ssaoBuffer);
+			
+				glClearColor(1.0, 1.0, 1.0, 1.0);
+				glClear(GL_COLOR_BUFFER_BIT);
 
-			glDepthFunc(GL_GREATER);
-			glDepthMask(GL_FALSE);
+				ssaoPass1.use();
 
-			glUniformMatrix4fv(uSSAOPass1View, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
-			glUniformMatrix4fv(uSSAOPass1Projection, 1, GL_FALSE, glm::value_ptr(projection));
+				glDepthFunc(GL_GREATER);
+				glDepthMask(GL_FALSE);
 
-			RenderFullscreenQuad();
+				glUniformMatrix4fv(uSSAOPass1View, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
+				glUniformMatrix4fv(uSSAOPass1Projection, 1, GL_FALSE, glm::value_ptr(projection));
 
-			ssaoPass2.use();
+				RenderFullscreenQuad();
 
-			glBindFramebuffer(GL_FRAMEBUFFER, reninfo.ssaoBlurBuffer);
-			glClear(GL_COLOR_BUFFER_BIT);
+				ssaoPass2.use();
 
-			RenderFullscreenQuad();
+				glBindFramebuffer(GL_FRAMEBUFFER, reninfo.ssaoBlurBuffer);
+				glClear(GL_COLOR_BUFFER_BIT);
+
+				RenderFullscreenQuad();
+			}
+			else {
+				glBindFramebuffer(GL_FRAMEBUFFER, reninfo.ssaoBlurBuffer);
+			
+				glClearColor(1.0, 1.0, 1.0, 1.0);
+				glClear(GL_COLOR_BUFFER_BIT);
+			}
 
 			glBindFramebuffer(GL_FRAMEBUFFER, reninfo.lBuffer);
 
@@ -773,77 +812,79 @@ int main(int argc, char ** argv) {
 			// Calculate Per Light Lighting //
 			//////////////////////////////////
 
-			lightbound.use();
+			if (dynamic_lighting) {
+				lightbound.use();
 
-			glBindVertexArray(Light_VAO);
+				glBindVertexArray(Light_VAO);
 
-			glUniformMatrix4fv(uLightBoundPerspective, 1, GL_FALSE, glm::value_ptr(projection));
-			glUniformMatrix4fv(uLightBoundView, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
-			glUniform3fv(uLightBoundViewPos, 1, glm::value_ptr(cam.get_location()));
-			glUniform2f(uLightBoundResolution, sdlm.size.width, sdlm.size.height);
+				glUniformMatrix4fv(uLightBoundPerspective, 1, GL_FALSE, glm::value_ptr(projection));
+				glUniformMatrix4fv(uLightBoundView, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
+				glUniform3fv(uLightBoundViewPos, 1, glm::value_ptr(cam.get_location()));
+				glUniform2f(uLightBoundResolution, sdlm.size.width, sdlm.size.height);
 
-			glDepthFunc(GL_LESS);
-			glDepthMask(GL_FALSE);
+				glDepthFunc(GL_LESS);
+				glDepthMask(GL_FALSE);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE);
-			
-			glEnable(GL_STENCIL_TEST);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_ONE, GL_ONE);
+				
+				glEnable(GL_STENCIL_TEST);
 
-			glDisableVertexAttribArray(0);
-			glEnableVertexAttribArray(7);
+				glDisableVertexAttribArray(0);
+				glEnableVertexAttribArray(7);
 
-			for (size_t i = 0; i < lightcount; ++i) {
-				glClear(GL_STENCIL_BUFFER_BIT);
+				for (size_t i = 0; i < lightcount; ++i) {
+					glClear(GL_STENCIL_BUFFER_BIT);
 
-				glUniformMatrix4fv(uLightBoundWorld, 1, GL_FALSE, glm::value_ptr(lighteffectworldmatrix[i]));
-				glUniform3fv(uLightBoundLightColor, 1, glm::value_ptr(lightcolor[i]));
-				glUniform3fv(uLightBoundLightPosition, 1, glm::value_ptr(lightposition[i]));
-				glUniform1f(uLightBoundRadius, lightdata[i].size);
+					glUniformMatrix4fv(uLightBoundWorld, 1, GL_FALSE, glm::value_ptr(lighteffectworldmatrix[i]));
+					glUniform3fv(uLightBoundLightColor, 1, glm::value_ptr(lightcolor[i]));
+					glUniform3fv(uLightBoundLightPosition, 1, glm::value_ptr(lightposition[i]));
+					glUniform1f(uLightBoundRadius, lightdata[i].size);
 
-				// Front (near) faces only
-				// Colour write is disabled
-				// Z-write is disabled
-				// Z function is 'Less/Equal'
-				// Z-Fail writes non-zero value to Stencil buffer (for example, 'Increment-Saturate')
-				// Stencil test result does not modify Stencil buffer
+					// Front (near) faces only
+					// Colour write is disabled
+					// Z-write is disabled
+					// Z function is 'Less/Equal'
+					// Z-Fail writes non-zero value to Stencil buffer (for example, 'Increment-Saturate')
+					// Stencil test result does not modify Stencil buffer
+
+					glCullFace(GL_BACK);
+					glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+					glDepthMask(GL_FALSE);
+					glDepthFunc(GL_LEQUAL);
+					glStencilMask(GL_TRUE);
+					glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+					glStencilFunc(GL_ALWAYS, 0, 0xFF);
+
+					glDrawArrays(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size());
+
+					// Back (far) faces only
+					// Colour write enabled
+					// Z-write is disabled
+					// Z function is 'Greater/Equal'
+					// Stencil function is 'Equal' (Stencil ref = zero)
+					// Always clears Stencil to zero
+
+					glCullFace(GL_FRONT);
+					glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+					// Z-write already disabled
+					glDepthFunc(GL_GEQUAL);
+					glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+					glStencilFunc(GL_EQUAL, 0, 0x00);
+
+					glDrawArrays(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size());
+				}
+
+				glDisableVertexAttribArray(7);
+				glEnableVertexAttribArray(0);
 
 				glCullFace(GL_BACK);
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-				glDepthMask(GL_FALSE);
+				glDepthMask(GL_TRUE);
 				glDepthFunc(GL_LEQUAL);
-				glStencilMask(GL_TRUE);
-				glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 				glStencilFunc(GL_ALWAYS, 0, 0xFF);
-
-				glDrawArrays(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size());
-
-				// Back (far) faces only
-				// Colour write enabled
-				// Z-write is disabled
-				// Z function is 'Greater/Equal'
-				// Stencil function is 'Equal' (Stencil ref = zero)
-				// Always clears Stencil to zero
-
-				glCullFace(GL_FRONT);
-				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-				// Z-write already disabled
-				glDepthFunc(GL_GEQUAL);
-				glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-				glStencilFunc(GL_EQUAL, 0, 0x00);
-
-				glDrawArrays(GL_TRIANGLES, 0, circlefile.objects[0].vertices.size());
+				glDisable(GL_STENCIL_TEST);
+				glDisable(GL_BLEND);
 			}
-
-			glDisableVertexAttribArray(7);
-			glEnableVertexAttribArray(0);
-
-			glCullFace(GL_BACK);
-			glDepthMask(GL_TRUE);
-			glDepthFunc(GL_LEQUAL);
-			glStencilFunc(GL_ALWAYS, 0, 0xFF);
-			glDisable(GL_STENCIL_TEST);
-			glDisable(GL_BLEND);
 
 			// Blit depth pass to current depth
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, reninfo.gBuffer);
@@ -893,23 +934,25 @@ int main(int argc, char ** argv) {
 
 			render_scene(uForwardSunWorld, uForwardSunView, uForwardSunProjection);
 
-			forward_lights.use();
-			glDepthMask(GL_FALSE);
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE);
+			if (dynamic_lighting) {
+				forward_lights.use();
+				glDepthMask(GL_FALSE);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_ONE, GL_ONE);
 
-			for (size_t i = 0; i < lightcount; ++i) {
-				glUniform3fv(uForwardLightsViewPos, 1, glm::value_ptr(cam.get_location()));
-				glUniform3fv(uForwardLightsLightPosition, 1, glm::value_ptr(lightposition[i]));
-				glUniform3fv(uForwardLightsLightColor, 1, glm::value_ptr(lightcolor[i]));
-				glUniform1f(uForwardLightsRadius, lightdata[i].size);
+				for (size_t i = 0; i < lightcount; ++i) {
+					glUniform3fv(uForwardLightsViewPos, 1, glm::value_ptr(cam.get_location()));
+					glUniform3fv(uForwardLightsLightPosition, 1, glm::value_ptr(lightposition[i]));
+					glUniform3fv(uForwardLightsLightColor, 1, glm::value_ptr(lightcolor[i]));
+					glUniform1f(uForwardLightsRadius, lightdata[i].size);
 
-				render_scene(uForwardLightsWorld, uForwardLightsView, uForwardLightsProjection);
+					render_scene(uForwardLightsWorld, uForwardLightsView, uForwardLightsProjection);
+				}
+
+				glDisable(GL_BLEND);
+				glBlendFunc(GL_ONE, GL_ZERO);
+				glDepthMask(GL_TRUE);
 			}
-
-			glDisable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ZERO);
-			glDepthMask(GL_TRUE);
 		}
 
 		////////////////
@@ -1189,6 +1232,16 @@ void PrepareBuffers(size_t x, size_t y, RenderInfo& data) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, data.ssaoColor, 0);
+
+	glGenTextures(1, &data.ssaoDepth);
+	glBindTexture(GL_TEXTURE_2D, data.ssaoDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F , x, y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, data.ssaoDepth, 0);
+
 
 	Check_RenderBuffer();
 

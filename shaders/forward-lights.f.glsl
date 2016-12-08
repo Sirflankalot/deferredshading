@@ -22,7 +22,7 @@ void main() {
     // Specular
     vec3 viewDir = normalize(viewPos - vFragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), 168.0);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 8.0);
     vec3 specular = spec * lightcolor;
     // Attenuation
     float dist = length(lightposition - vFragPos);
