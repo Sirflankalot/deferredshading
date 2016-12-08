@@ -13,9 +13,9 @@ out vec3 vFragPos;
 out vec3 vTexCoords;
 
 void main() {
-	vec4 worldloc = world * vec4(position, 1.0);
-    gl_Position = projection * view * worldloc;
-    vNormal = mat3(transpose(inverse(world))) * normals;
-    vFragPos = vec3(worldloc);
+	vec4 viewPos = view * world * vec4(position, 1.0);
+    gl_Position = projection * viewPos;
+    vNormal = normalize(mat3(transpose(inverse(view * world))) * normals);
+    vFragPos = vec3(viewPos);
     vTexCoords = vec3(0, 0, 0);
 }

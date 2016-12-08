@@ -12,9 +12,9 @@ void main() {
 	// Position vector
 	gPosition = vFragPos;
 	// Normal vector
-	gNormal = normalize(vNormal);
+	gNormal = vNormal;
 	// Diffuse color
 	gAlbedoSpec.rgb = vec3(1.0, 0.2176, 0.028991);
 	// Specular
-	gAlbedoSpec.a = 1.0f;
+	gAlbedoSpec.a = 1.0;
 }

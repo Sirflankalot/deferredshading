@@ -13,7 +13,7 @@ uniform vec3 samples[64];
 uniform mat4 view;
 uniform mat4 projection;
 
-const int kernelSize = 64;
+const int kernelSize = 32;
 const float radius = 2.0;
 const float bias = 0.000;
 
@@ -27,8 +27,8 @@ float LinearizeDepth(float depth) {
 
 void main() {
 	// Inputs
-	vec3 fragPos = vec3(view * vec4(texture(gPositionDepth, vTexCoords).xyz, 1.0));
-	vec3 normal = normalize(mat3(transpose(inverse(view))) * texture(gNormal, vTexCoords).rgb);
+	vec3 fragPos = texture(gPositionDepth, vTexCoords).xyz;
+	vec3 normal = normalize(texture(gNormal, vTexCoords).rgb);
 	float depth = LinearizeDepth(texture(gDepth, vTexCoords).r);
 
 	vec3 randomVec = texture(texNoise, gl_FragCoord.xy / vec2(4.0)).xyz;

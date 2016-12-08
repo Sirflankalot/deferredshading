@@ -6,14 +6,13 @@ in vec3 vTexCoords;
 
 out vec4 FragColor;
 
-uniform vec3 viewPos; // Viewport position
-
 uniform vec3 lightposition;
 uniform vec3 lightcolor;
 
 uniform float radius;
 
 void main() {
+    const vec3 viewPos = vec3(0, 0, 0);
 	vec3 normal = normalize(vNormal);
 	// Calculate lighting
     // Diffuse

@@ -198,7 +198,6 @@ int main(int argc, char ** argv) {
 	auto uForwardLightsWorld = forward_lights.getUniform("world", Shader::MANDITORY);
 	auto uForwardLightsView = forward_lights.getUniform("view", Shader::MANDITORY);
 	auto uForwardLightsProjection = forward_lights.getUniform("projection", Shader::MANDITORY);
-	auto uForwardLightsViewPos = forward_lights.getUniform("viewPos", Shader::MANDITORY);
 	auto uForwardLightsLightPosition = forward_lights.getUniform("lightposition", Shader::MANDITORY);
 	auto uForwardLightsLightColor = forward_lights.getUniform("lightcolor", Shader::MANDITORY);
 	auto uForwardLightsRadius = forward_lights.getUniform("radius", Shader::MANDITORY);
@@ -218,7 +217,6 @@ int main(int argc, char ** argv) {
 	glUniform1i(ssaoPass1.getUniform("texNoise"), 3);
 
 	auto uSSAOPass1Samples = ssaoPass1.getUniform("samples", Shader::MANDITORY);
-	auto uSSAOPass1View = ssaoPass1.getUniform("view", Shader::MANDITORY);
 	auto uSSAOPass1Projection = ssaoPass1.getUniform("projection", Shader::MANDITORY);
 
 	Shader_Program ssaoPass2;
@@ -655,7 +653,7 @@ int main(int argc, char ** argv) {
 			glm::mat4 effectscale = glm::scale(glm::mat4(), glm::vec3(lp.size));
 
 			glm::mat4 unscaled = orbit * height * trans;
-			lightposition[i] = glm::vec3(unscaled * glm::vec4(0, 0, 0, 1));
+			lightposition[i] = glm::vec3(cam.get_matrix() * unscaled * glm::vec4(0, 0, 0, 1));
 			lightworldmatrix[i] = unscaled * scale;
 			lighteffectworldmatrix[i] = unscaled * effectscale;
 		}
@@ -764,7 +762,6 @@ int main(int argc, char ** argv) {
 				glDepthFunc(GL_GREATER);
 				glDepthMask(GL_FALSE);
 
-				glUniformMatrix4fv(uSSAOPass1View, 1, GL_FALSE, glm::value_ptr(cam.get_matrix()));
 				glUniformMatrix4fv(uSSAOPass1Projection, 1, GL_FALSE, glm::value_ptr(projection));
 
 				RenderFullscreenQuad();
@@ -941,7 +938,6 @@ int main(int argc, char ** argv) {
 				glBlendFunc(GL_ONE, GL_ONE);
 
 				for (size_t i = 0; i < lightcount; ++i) {
-					glUniform3fv(uForwardLightsViewPos, 1, glm::value_ptr(cam.get_location()));
 					glUniform3fv(uForwardLightsLightPosition, 1, glm::value_ptr(lightposition[i]));
 					glUniform3fv(uForwardLightsLightColor, 1, glm::value_ptr(lightcolor[i]));
 					glUniform1f(uForwardLightsRadius, lightdata[i].size);

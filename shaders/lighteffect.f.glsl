@@ -6,7 +6,7 @@ uniform sampler2D gPosition;   // World space position
 uniform sampler2D gNormal;     // World space normals
 uniform sampler2D gAlbedoSpec; // Albedo in rgb spec in a
 
-uniform vec3 viewPos; // Viewport position
+// uniform vec3 viewPos; // Viewport position
 uniform vec2 resolution; // Screen Resolution
 
 uniform vec3 lightposition;
@@ -15,6 +15,8 @@ uniform vec3 lightcolor;
 uniform float radius;
 
 void main() {
+    const vec3 viewPos = vec3(0, 0, 0);
+
 	vec2 texcoords = (gl_FragCoord.xy / resolution);
 
 	// Get data from gbuffer
